@@ -1,0 +1,38 @@
+name: C/C++ CI  # Название процесса
+
+on:
+  push:
+    branches: [ "main", "master" ] # Запускать при пуше в эти ветки
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest  # Используем последнюю версию Ubuntu
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4 # Копируем код репозитория на виртуальную машину
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libsqlite3-dev lcov
+
+    - name: Build project
+      run: make  # Запускаем твой Makefile
+
+    - name: Run tests
+      run: make test # Запускаем тесты, которые мы настроили
+
+    - name: Generate Coverage Report
+      run: |
+        lcov --capture --directory . --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' --output-file coverage.info
+        genhtml coverage.info --output-directory out
+
+    - name: Upload Test Results
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: out/ # GitHub сохранит твой HTML-отчет как архив, который можно скачать
