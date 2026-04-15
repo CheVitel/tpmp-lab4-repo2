@@ -1,0 +1,189 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - src/db_logic.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="title">LCOV - code coverage report</td></tr>
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+            <tr>
+              <td width="100%">
+                <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="10%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">src</a> - db_logic.c<span style="font-size: 80%;"> (source / <a href="db_logic.c.func-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="5%"></td>
+            <td width="5%" class="headerCovTableHead">Coverage</td>
+            <td width="5%" class="headerCovTableHead" title="Covered + Uncovered code">Total</td>
+            <td width="5%" class="headerCovTableHead" title="Exercised code only">Hit</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntryMed">81.2&nbsp;%</td>
+            <td class="headerCovTableEntry">48</td>
+            <td class="headerCovTableEntry">39</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test Date:</td>
+            <td class="headerValue">2026-04-15 20:49:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntryLo">62.5&nbsp;%</td>
+            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntry">5</td>
+          </tr>
+                  <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+          </table>
+
+          <table cellpadding=0 cellspacing=0 border=0>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td>
+<pre class="sourceHeading">            Line data    Source code</pre>
+<pre class="source">
+<span id="L1"><span class="lineNum">       1</span>              : #include &lt;stdio.h&gt;</span>
+<span id="L2"><span class="lineNum">       2</span>              : #include &lt;stdlib.h&gt;</span>
+<span id="L3"><span class="lineNum">       3</span>              : #include &lt;string.h&gt;</span>
+<span id="L4"><span class="lineNum">       4</span>              : #include &quot;salon.h&quot;</span>
+<span id="L5"><span class="lineNum">       5</span>              : </span>
+<span id="L6"><span class="lineNum">       6</span>              : sqlite3 *db;</span>
+<span id="L7"><span class="lineNum">       7</span>              : </span>
+<span id="L8"><span class="lineNum">       8</span> <span class="tlaGNC tlaBgGNC">           2 : int init_db(const char *db_name) {</span></span>
+<span id="L9"><span class="lineNum">       9</span> <span class="tlaGNC">           2 :     if (sqlite3_open(db_name, &amp;db) != SQLITE_OK) return 0;</span></span>
+<span id="L10"><span class="lineNum">      10</span>              : </span>
+<span id="L11"><span class="lineNum">      11</span>              :     // 1. Создание таблиц</span>
+<span id="L12"><span class="lineNum">      12</span> <span class="tlaGNC">           2 :     const char *sql = </span></span>
+<span id="L13"><span class="lineNum">      13</span>              :         &quot;CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT, password TEXT);&quot;</span>
+<span id="L14"><span class="lineNum">      14</span>              :         &quot;CREATE TABLE IF NOT EXISTS cds (code TEXT PRIMARY KEY, manuf_date TEXT, manufacturer TEXT, price REAL);&quot;</span>
+<span id="L15"><span class="lineNum">      15</span>              :         &quot;CREATE TABLE IF NOT EXISTS tracks (id INTEGER PRIMARY KEY, title TEXT, author TEXT, performer TEXT, cd_code TEXT);&quot;</span>
+<span id="L16"><span class="lineNum">      16</span>              :         &quot;CREATE TABLE IF NOT EXISTS operations (id INTEGER PRIMARY KEY, op_date TEXT, op_type TEXT, cd_code TEXT, quantity INTEGER);&quot;</span>
+<span id="L17"><span class="lineNum">      17</span>              :         &quot;CREATE TABLE IF NOT EXISTS period_results (cd_code TEXT, in_qty INTEGER, out_qty INTEGER);&quot;;</span>
+<span id="L18"><span class="lineNum">      18</span>              : </span>
+<span id="L19"><span class="lineNum">      19</span> <span class="tlaGNC">           2 :     sqlite3_exec(db, sql, 0, 0, 0);</span></span>
+<span id="L20"><span class="lineNum">      20</span>              : </span>
+<span id="L21"><span class="lineNum">      21</span>              :     // ВАЖНО: Добавляем тестового пользователя, если его нет (нужно для тестов!)</span>
+<span id="L22"><span class="lineNum">      22</span> <span class="tlaGNC">           2 :     const char *insert_admin = &quot;INSERT OR IGNORE INTO users (id, username, password) VALUES (1, 'admin', 'admin123');&quot;;</span></span>
+<span id="L23"><span class="lineNum">      23</span> <span class="tlaGNC">           2 :     sqlite3_exec(db, insert_admin, 0, 0, 0);</span></span>
+<span id="L24"><span class="lineNum">      24</span>              : </span>
+<span id="L25"><span class="lineNum">      25</span>              :     // 4. ТРИГГЕР (Пункт 4 задания)</span>
+<span id="L26"><span class="lineNum">      26</span> <span class="tlaGNC">           2 :     const char *trigger_sql = </span></span>
+<span id="L27"><span class="lineNum">      27</span>              :         &quot;CREATE TRIGGER IF NOT EXISTS check_stock BEFORE INSERT ON operations &quot;</span>
+<span id="L28"><span class="lineNum">      28</span>              :         &quot;FOR EACH ROW WHEN NEW.op_type = 'OUT' &quot;</span>
+<span id="L29"><span class="lineNum">      29</span>              :         &quot;BEGIN &quot;</span>
+<span id="L30"><span class="lineNum">      30</span>              :         &quot;  SELECT CASE WHEN (&quot;</span>
+<span id="L31"><span class="lineNum">      31</span>              :         &quot;    (SELECT COALESCE(SUM(quantity), 0) FROM operations WHERE cd_code = NEW.cd_code AND op_type = 'IN') - &quot;</span>
+<span id="L32"><span class="lineNum">      32</span>              :         &quot;    (SELECT COALESCE(SUM(quantity), 0) FROM operations WHERE cd_code = NEW.cd_code AND op_type = 'OUT') - NEW.quantity &lt; 0&quot;</span>
+<span id="L33"><span class="lineNum">      33</span>              :         &quot;  ) THEN RAISE(ABORT, 'Ошибка: Недостаточно товара!') END; &quot;</span>
+<span id="L34"><span class="lineNum">      34</span>              :         &quot;END;&quot;;</span>
+<span id="L35"><span class="lineNum">      35</span>              :     </span>
+<span id="L36"><span class="lineNum">      36</span> <span class="tlaGNC">           2 :     sqlite3_exec(db, trigger_sql, 0, 0, 0);</span></span>
+<span id="L37"><span class="lineNum">      37</span> <span class="tlaGNC">           2 :     return 1;</span></span>
+<span id="L38"><span class="lineNum">      38</span>              : }</span>
+<span id="L39"><span class="lineNum">      39</span>              : </span>
+<span id="L40"><span class="lineNum">      40</span>              : // 2.1 Сведения о количестве проданных и оставшихся</span>
+<span id="L41"><span class="lineNum">      41</span> <span class="tlaUNC tlaBgUNC">           0 : void report_stock_balance() {</span></span>
+<span id="L42"><span class="lineNum">      42</span> <span class="tlaUNC">           0 :     const char *sql = </span></span>
+<span id="L43"><span class="lineNum">      43</span>              :         &quot;SELECT c.code, &quot;</span>
+<span id="L44"><span class="lineNum">      44</span>              :         &quot;SUM(CASE WHEN o.op_type='OUT' THEN o.quantity ELSE 0 END) as sold, &quot;</span>
+<span id="L45"><span class="lineNum">      45</span>              :         &quot;(SUM(CASE WHEN o.op_type='IN' THEN o.quantity ELSE 0 END) - SUM(CASE WHEN o.op_type='OUT' THEN o.quantity ELSE 0 END)) as stock &quot;</span>
+<span id="L46"><span class="lineNum">      46</span>              :         &quot;FROM cds c LEFT JOIN operations o ON c.code = o.cd_code &quot;</span>
+<span id="L47"><span class="lineNum">      47</span>              :         &quot;GROUP BY c.code ORDER BY (stock) DESC;&quot;;</span>
+<span id="L48"><span class="lineNum">      48</span>              :     // Выполнение через sqlite3_prepare_v2... (логика печати аналогична предыдущим)</span>
+<span id="L49"><span class="lineNum">      49</span> <span class="tlaUNC">           0 : }</span></span>
+<span id="L50"><span class="lineNum">      50</span>              : </span>
+<span id="L51"><span class="lineNum">      51</span>              : // 2.3 Компакт, купленный MAX количество раз (*)</span>
+<span id="L52"><span class="lineNum">      52</span> <span class="tlaUNC">           0 : void report_most_popular_cd() {</span></span>
+<span id="L53"><span class="lineNum">      53</span> <span class="tlaUNC">           0 :     const char *sql = </span></span>
+<span id="L54"><span class="lineNum">      54</span>              :         &quot;SELECT c.*, t.title, t.performer FROM cds c &quot;</span>
+<span id="L55"><span class="lineNum">      55</span>              :         &quot;JOIN tracks t ON c.code = t.cd_code &quot;</span>
+<span id="L56"><span class="lineNum">      56</span>              :         &quot;WHERE c.code = (SELECT cd_code FROM operations WHERE op_type='OUT' GROUP BY cd_code ORDER BY SUM(quantity) DESC LIMIT 1);&quot;;</span>
+<span id="L57"><span class="lineNum">      57</span>              :     // Печать результатов...</span>
+<span id="L58"><span class="lineNum">      58</span> <span class="tlaUNC">           0 : }</span></span>
+<span id="L59"><span class="lineNum">      59</span>              : </span>
+<span id="L60"><span class="lineNum">      60</span>              : // 5. Функция за период (заносит в специальную таблицу)</span>
+<span id="L61"><span class="lineNum">      61</span> <span class="tlaGNC tlaBgGNC">           1 : void run_period_summary(const char* start, const char* end) {</span></span>
+<span id="L62"><span class="lineNum">      62</span> <span class="tlaGNC">           1 :     sqlite3_exec(db, &quot;DELETE FROM period_results;&quot;, 0, 0, 0);</span></span>
+<span id="L63"><span class="lineNum">      63</span> <span class="tlaGNC">           1 :     const char *sql = </span></span>
+<span id="L64"><span class="lineNum">      64</span>              :         &quot;INSERT INTO period_results &quot;</span>
+<span id="L65"><span class="lineNum">      65</span>              :         &quot;SELECT cd_code, &quot;</span>
+<span id="L66"><span class="lineNum">      66</span>              :         &quot;SUM(CASE WHEN op_type='IN' THEN quantity ELSE 0 END), &quot;</span>
+<span id="L67"><span class="lineNum">      67</span>              :         &quot;SUM(CASE WHEN op_type='OUT' THEN quantity ELSE 0 END) &quot;</span>
+<span id="L68"><span class="lineNum">      68</span>              :         &quot;FROM operations WHERE op_date BETWEEN ? AND ? GROUP BY cd_code;&quot;;</span>
+<span id="L69"><span class="lineNum">      69</span>              :     </span>
+<span id="L70"><span class="lineNum">      70</span>              :     sqlite3_stmt *stmt;</span>
+<span id="L71"><span class="lineNum">      71</span> <span class="tlaGNC">           1 :     sqlite3_prepare_v2(db, sql, -1, &amp;stmt, 0);</span></span>
+<span id="L72"><span class="lineNum">      72</span> <span class="tlaGNC">           1 :     sqlite3_bind_text(stmt, 1, start, -1, SQLITE_STATIC);</span></span>
+<span id="L73"><span class="lineNum">      73</span> <span class="tlaGNC">           1 :     sqlite3_bind_text(stmt, 2, end, -1, SQLITE_STATIC);</span></span>
+<span id="L74"><span class="lineNum">      74</span> <span class="tlaGNC">           1 :     sqlite3_step(stmt);</span></span>
+<span id="L75"><span class="lineNum">      75</span> <span class="tlaGNC">           1 :     sqlite3_finalize(stmt);</span></span>
+<span id="L76"><span class="lineNum">      76</span> <span class="tlaGNC">           1 :     printf(&quot;Отчет за период %s - %s успешно сформирован в таблице period_results.\n&quot;, start, end);</span></span>
+<span id="L77"><span class="lineNum">      77</span> <span class="tlaGNC">           1 : }</span></span>
+<span id="L78"><span class="lineNum">      78</span>              : </span>
+<span id="L79"><span class="lineNum">      79</span>              : // 6. Результаты продажи по коду за период (*)</span>
+<span id="L80"><span class="lineNum">      80</span> <span class="tlaUNC tlaBgUNC">           0 : void get_cd_sales_info(const char* code, const char* start, const char* end) {</span></span>
+<span id="L81"><span class="lineNum">      81</span> <span class="tlaUNC">           0 :     const char *sql = &quot;SELECT SUM(quantity), SUM(quantity * (SELECT price FROM cds WHERE code = ?)) &quot;</span></span>
+<span id="L82"><span class="lineNum">      82</span>              :                       &quot;FROM operations WHERE cd_code = ? AND op_type = 'OUT' AND op_date BETWEEN ? AND ?;&quot;;</span>
+<span id="L83"><span class="lineNum">      83</span>              :     // Подготовка и вывод...</span>
+<span id="L84"><span class="lineNum">      84</span> <span class="tlaUNC">           0 : }</span></span>
+<span id="L85"><span class="lineNum">      85</span>              : </span>
+<span id="L86"><span class="lineNum">      86</span> <span class="tlaGNC tlaBgGNC">           3 : int authenticate(const char *username, const char *password) {</span></span>
+<span id="L87"><span class="lineNum">      87</span>              :     sqlite3_stmt *stmt;</span>
+<span id="L88"><span class="lineNum">      88</span> <span class="tlaGNC">           3 :     const char *sql = &quot;SELECT id FROM users WHERE username = ? AND password = ?&quot;;</span></span>
+<span id="L89"><span class="lineNum">      89</span> <span class="tlaGNC">           3 :     int auth_success = 0;</span></span>
+<span id="L90"><span class="lineNum">      90</span> <span class="tlaGNC">           3 :     if (sqlite3_prepare_v2(db, sql, -1, &amp;stmt, 0) == SQLITE_OK) {</span></span>
+<span id="L91"><span class="lineNum">      91</span> <span class="tlaGNC">           3 :         sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);</span></span>
+<span id="L92"><span class="lineNum">      92</span> <span class="tlaGNC">           3 :         sqlite3_bind_text(stmt, 2, password, -1, SQLITE_STATIC);</span></span>
+<span id="L93"><span class="lineNum">      93</span> <span class="tlaGNC">           3 :         if (sqlite3_step(stmt) == SQLITE_ROW) auth_success = 1;</span></span>
+<span id="L94"><span class="lineNum">      94</span> <span class="tlaGNC">           3 :         sqlite3_finalize(stmt);</span></span>
+<span id="L95"><span class="lineNum">      95</span>              :     }</span>
+<span id="L96"><span class="lineNum">      96</span> <span class="tlaGNC">           3 :     return auth_success;</span></span>
+<span id="L97"><span class="lineNum">      97</span>              : }</span>
+<span id="L98"><span class="lineNum">      98</span>              : </span>
+<span id="L99"><span class="lineNum">      99</span> <span class="tlaGNC">           1 : void add_cd_with_cover(const char *code, const char *manufacturer, double price, const char *image_path) {</span></span>
+<span id="L100"><span class="lineNum">     100</span>              :     sqlite3_stmt *stmt;</span>
+<span id="L101"><span class="lineNum">     101</span> <span class="tlaGNC">           1 :     const char *sql = &quot;INSERT OR IGNORE INTO cds (code, manufacturer, price) VALUES (?, ?, ?);&quot;;</span></span>
+<span id="L102"><span class="lineNum">     102</span>              :     </span>
+<span id="L103"><span class="lineNum">     103</span> <span class="tlaGNC">           1 :     if (sqlite3_prepare_v2(db, sql, -1, &amp;stmt, 0) == SQLITE_OK) {</span></span>
+<span id="L104"><span class="lineNum">     104</span> <span class="tlaGNC">           1 :         sqlite3_bind_text(stmt, 1, code, -1, SQLITE_STATIC);</span></span>
+<span id="L105"><span class="lineNum">     105</span> <span class="tlaGNC">           1 :         sqlite3_bind_text(stmt, 2, manufacturer, -1, SQLITE_STATIC);</span></span>
+<span id="L106"><span class="lineNum">     106</span> <span class="tlaGNC">           1 :         sqlite3_bind_double(stmt, 3, price);</span></span>
+<span id="L107"><span class="lineNum">     107</span> <span class="tlaGNC">           1 :         sqlite3_step(stmt);</span></span>
+<span id="L108"><span class="lineNum">     108</span> <span class="tlaGNC">           1 :         sqlite3_finalize(stmt);</span></span>
+<span id="L109"><span class="lineNum">     109</span>              :     }</span>
+<span id="L110"><span class="lineNum">     110</span> <span class="tlaGNC">           1 :     printf(&quot;Test log: Added CD %s (Path: %s)\n&quot;, code, image_path);</span></span>
+<span id="L111"><span class="lineNum">     111</span> <span class="tlaGNC">           1 : }</span></span>
+<span id="L112"><span class="lineNum">     112</span>              : </span>
+<span id="L113"><span class="lineNum">     113</span> <span class="tlaGNC">           2 : void close_db() { sqlite3_close(db); }</span></span>
+        </pre>
+              </td>
+            </tr>
+          </table>
+          <br>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+            <tr><td class="versionInfo">Generated by: <a href="https://github.com//linux-test-project/lcov" target="_parent">LCOV version 2.0-1</a></td></tr>
+          </table>
+          <br>
+
+</body>
+</html>

@@ -8,16 +8,21 @@ sqlite3 *db;
 int init_db(const char *db_name) {
     if (sqlite3_open(db_name, &db) != SQLITE_OK) return 0;
 
-    // 1. Создание таблиц (Пункт 1)
+    // 1. Создание таблиц
     const char *sql = 
+        "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT, password TEXT);"
         "CREATE TABLE IF NOT EXISTS cds (code TEXT PRIMARY KEY, manuf_date TEXT, manufacturer TEXT, price REAL);"
-        "CREATE TABLE IF NOT EXISTS tracks (id INTEGER PRIMARY KEY, title TEXT, author TEXT, performer TEXT, cd_code TEXT, FOREIGN KEY(cd_code) REFERENCES cds(code));"
+        "CREATE TABLE IF NOT EXISTS tracks (id INTEGER PRIMARY KEY, title TEXT, author TEXT, performer TEXT, cd_code TEXT);"
         "CREATE TABLE IF NOT EXISTS operations (id INTEGER PRIMARY KEY, op_date TEXT, op_type TEXT, cd_code TEXT, quantity INTEGER);"
-        "CREATE TABLE IF NOT EXISTS period_results (cd_code TEXT, in_qty INTEGER, out_qty INTEGER);"; // Для Пункта 5
+        "CREATE TABLE IF NOT EXISTS period_results (cd_code TEXT, in_qty INTEGER, out_qty INTEGER);";
 
     sqlite3_exec(db, sql, 0, 0, 0);
 
-    // 4. ТРИГГЕР: Запрет продажи, если остаток будет < 0 (Пункт 4)
+    // ВАЖНО: Добавляем тестового пользователя, если его нет (нужно для тестов!)
+    const char *insert_admin = "INSERT OR IGNORE INTO users (id, username, password) VALUES (1, 'admin', 'admin123');";
+    sqlite3_exec(db, insert_admin, 0, 0, 0);
+
+    // 4. ТРИГГЕР (Пункт 4 задания)
     const char *trigger_sql = 
         "CREATE TRIGGER IF NOT EXISTS check_stock BEFORE INSERT ON operations "
         "FOR EACH ROW WHEN NEW.op_type = 'OUT' "
@@ -25,7 +30,7 @@ int init_db(const char *db_name) {
         "  SELECT CASE WHEN ("
         "    (SELECT COALESCE(SUM(quantity), 0) FROM operations WHERE cd_code = NEW.cd_code AND op_type = 'IN') - "
         "    (SELECT COALESCE(SUM(quantity), 0) FROM operations WHERE cd_code = NEW.cd_code AND op_type = 'OUT') - NEW.quantity < 0"
-        "  ) THEN RAISE(ABORT, 'Ошибка: Недостаточно товара на складе!') END; "
+        "  ) THEN RAISE(ABORT, 'Ошибка: Недостаточно товара!') END; "
         "END;";
     
     sqlite3_exec(db, trigger_sql, 0, 0, 0);
@@ -76,6 +81,33 @@ void get_cd_sales_info(const char* code, const char* start, const char* end) {
     const char *sql = "SELECT SUM(quantity), SUM(quantity * (SELECT price FROM cds WHERE code = ?)) "
                       "FROM operations WHERE cd_code = ? AND op_type = 'OUT' AND op_date BETWEEN ? AND ?;";
     // Подготовка и вывод...
+}
+
+int authenticate(const char *username, const char *password) {
+    sqlite3_stmt *stmt;
+    const char *sql = "SELECT id FROM users WHERE username = ? AND password = ?";
+    int auth_success = 0;
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK) {
+        sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, password, -1, SQLITE_STATIC);
+        if (sqlite3_step(stmt) == SQLITE_ROW) auth_success = 1;
+        sqlite3_finalize(stmt);
+    }
+    return auth_success;
+}
+
+void add_cd_with_cover(const char *code, const char *manufacturer, double price, const char *image_path) {
+    sqlite3_stmt *stmt;
+    const char *sql = "INSERT OR IGNORE INTO cds (code, manufacturer, price) VALUES (?, ?, ?);";
+    
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, 0) == SQLITE_OK) {
+        sqlite3_bind_text(stmt, 1, code, -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, manufacturer, -1, SQLITE_STATIC);
+        sqlite3_bind_double(stmt, 3, price);
+        sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+    }
+    printf("Test log: Added CD %s (Path: %s)\n", code, image_path);
 }
 
 void close_db() { sqlite3_close(db); }
